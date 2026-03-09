@@ -163,9 +163,46 @@ So vendor alerts and live sold-out/status work.
 | Issue | Check |
 |-------|--------|
 | Stalls never load | Env vars on host; Supabase project not paused; RLS allows anon to read stalls/menu_items (011). |
+| **Connection timed out on Vercel** | See **§7.1** below. |
 | “Could not load blocks” | Run 007_seed.sql; RLS 009 allows anon to read residential_blocks. |
 | Vendor sign-in redirects to home | User has a row in `public.users` with `role = 'vendor'` and `stall_id` set. |
 | QR scan / fulfill fails | `SUPABASE_SERVICE_ROLE_KEY` set on host (for server-side fulfill API). |
 | No new-order / customer-left alerts | Realtime enabled for `orders`; 016 (REPLICA IDENTITY FULL) applied. |
+
+### 7.1 Connection timed out on Vercel
+
+If your **Vercel-deployed app** shows “Connection timed out” when loading stalls (or `/api/health` times out), do the following.
+
+1. **Wake up your Supabase project (most common cause)**  
+   On the **free tier**, Supabase **pauses** projects after a period of inactivity. The first request from your app can then time out waiting for the project to start.
+
+   - Open [Supabase Dashboard](https://supabase.com/dashboard) and click your project.
+   - If it says “Paused”, open the project and wait until it shows “Active” (often 1–2 minutes).
+   - In your **Vercel** app, click **Retry** or reload the page; stalls should load.
+
+2. **Confirm environment variables on Vercel**  
+   - Vercel → your project → **Settings** → **Environment Variables**.  
+   - Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set for **Production** (and Preview if needed).  
+   - After changing env vars, trigger a **new deployment** (Redeploy from Deployments tab).  
+   - Test again: `https://your-app.vercel.app/api/health` should return `{"ok":true}` when Supabase is reachable.
+
+3. **Keep Supabase awake (optional)**  
+   To reduce timeouts for users who hit the app when the project has been idle:
+
+   - **Manual:** Open the Supabase project in the Dashboard every few days, or open your app’s `/api/health` in a browser so a request hits Supabase.
+   - **Automated (Vercel Pro):** Add a [Vercel Cron Job](https://vercel.com/docs/cron-jobs) that calls your app’s `/api/health` every 5–10 minutes so Supabase stays warm. Example in `vercel.json`:
+     ```json
+     {
+       "crons": [{ "path": "/api/health", "schedule": "*/10 * * * *" }]
+     }
+     ```
+     (Cron is a paid feature; free tier can use an external uptime checker like [cron-job.org](https://cron-job.org) to GET `https://your-app.vercel.app/api/health` on a schedule.)
+
+4. **If it still times out**  
+   - Visit `https://your-app.vercel.app/api/health` in a browser. If it fails or times out, the problem is Vercel → Supabase connectivity or a paused/wrong project.  
+   - Double-check the **Project URL** in Supabase (Settings → API) matches `NEXT_PUBLIC_SUPABASE_URL` exactly (no trailing slash).  
+   - Ensure the **anon key** (or publishable key) is the one in `NEXT_PUBLIC_SUPABASE_ANON_KEY`, not the service role key.
+
+---
 
 End of deployment guide.

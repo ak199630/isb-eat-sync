@@ -27,7 +27,8 @@ function mapDbMenuItem(row: DbMenuItem): MenuItem {
   };
 }
 
-const STALLS_FETCH_TIMEOUT_MS = 15_000;
+/** Long enough for a paused Supabase project (free tier) to wake on first request. */
+const STALLS_FETCH_TIMEOUT_MS = 25_000;
 const STALLS_CACHE_TTL_MS = 30_000; // 30s: instant back-navigation, Realtime still refreshes
 
 let stallsCache: { data: Stall[]; expiresAt: number } | null = null;
@@ -97,7 +98,12 @@ export async function fetchStallsWithMenu(): Promise<Stall[]> {
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(
-      () => reject(new Error("Connection timed out. Check Supabase URL and anon key in .env.local, and that the project is running.")),
+      () =>
+        reject(
+          new Error(
+            "Connection timed out. Your Supabase project may be paused (free tier). Open your project in the Supabase Dashboard to wake it up, then Retry. Or check .env.local (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY). Test connectivity: GET /api/health"
+          )
+        ),
       STALLS_FETCH_TIMEOUT_MS
     );
   });

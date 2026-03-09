@@ -18,11 +18,17 @@ export default function HomePage() {
   }
 
   if (error) {
+    const isTimeout = /timed out|timeout/i.test(error);
     return (
       <div className="container mx-auto max-w-3xl space-y-4 p-6">
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
           <p className="font-medium">Could not load stalls</p>
           <p className="mt-1 text-sm">{error}</p>
+          {isTimeout && (
+            <p className="mt-3 text-sm opacity-90">
+              If you use Supabase free tier: open your project in the Supabase Dashboard so it can wake up, then click Retry. You can also open <code className="rounded bg-black/20 px-1">/api/health</code> in the browser to test connectivity.
+            </p>
+          )}
         </div>
         <Button variant="outline" onClick={() => refetch()}>
           Retry
